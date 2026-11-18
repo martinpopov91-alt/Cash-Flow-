@@ -1,0 +1,218 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserSettings(data, userId) {
+      return data.keys().hasAll(['uid', 'language', 'theme', 'currency', 'defaultSeeded', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'language', 'theme', 'currency', 'defaultSeeded', 'updatedAt'])
+        && data.uid is string
+        && data.uid.size() >= 1
+        && data.uid.size() <= 128
+        && data.uid == userId
+        && data.uid == request.auth.uid
+        && data.language is string
+        && data.language.size() == 2
+        && data.language in ['en', 'bg']
+        && data.theme is string
+        && data.theme.size() >= 4
+        && data.theme.size() <= 5
+        && data.theme in ['light', 'dark']
+        && data.currency is string
+        && data.currency.size() == 3
+        && data.currency == 'EUR'
+        && data.defaultSeeded is bool
+        && data.updatedAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
+    function isValidMonthlyBudget(data, userId, monthId) {
+      return data.keys().hasAll(['ownerId', 'monthKey', 'year', 'month', 'items', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'monthKey', 'year', 'month', 'items', 'createdAt', 'updatedAt'])
+        && data.ownerId is string
+        && data.ownerId.size() >= 1
+        && data.ownerId.size() <= 128
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && data.monthKey is string
+        && data.monthKey.size() == 7
+        && data.monthKey.matches('^[0-9]{4}-[0-9]{2}$')
+        && data.monthKey == monthId
+        && data.year is int
+        && data.year >= 2000
+        && data.year <= 2100
+        && data.month is int
+        && data.month >= 1
+        && data.month <= 12
+        && data.items is list
+        && data.items.size() <= 100
+        && (data.items.size() == 0 || data.items[0] is map)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
+    function isValidTransactionEntry(data, userId, monthId) {
+      return data.keys().hasAll(['ownerId', 'monthKey', 'lineItemId', 'group', 'amount', 'note', 'date', 'createdAt'])
+        && data.keys().hasOnly([
+          'ownerId', 'monthKey', 'lineItemId', 'group', 'amount', 'note', 'date', 'createdAt',
+          'categoryId', 'subcategoryId', 'subcategoryNameEn', 'subcategoryNameBg'
+        ])
+        && data.ownerId is string
+        && data.ownerId.size() >= 1
+        && data.ownerId.size() <= 128
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && data.monthKey is string
+        && data.monthKey.size() == 7
+        && data.monthKey.matches('^[0-9]{4}-[0-9]{2}$')
+        && data.monthKey == monthId
+        && data.lineItemId is string
+        && data.lineItemId.size() >= 1
+        && data.lineItemId.size() <= 64
+        && data.lineItemId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.group is string
+        && data.group.size() >= 5
+        && data.group.size() <= 8
+        && data.group in ['income', 'bills', 'variable', 'savings']
+        && (data.amount is int || data.amount is float)
+        && data.amount >= 0
+        && data.amount <= 10000000
+        && data.note is string
+        && data.note.size() <= 200
+        && data.date is string
+        && data.date.size() == 10
+        && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && (!('categoryId' in data) || (data.categoryId is string && data.categoryId.size() >= 1 && data.categoryId.size() <= 64 && data.categoryId.matches('^[a-zA-Z0-9_\\-]+$')))
+        && (!('subcategoryId' in data) || (data.subcategoryId is string && data.subcategoryId.size() >= 1 && data.subcategoryId.size() <= 64 && data.subcategoryId.matches('^[a-zA-Z0-9_\\-]+$')))
+        && (!('subcategoryNameEn' in data) || (data.subcategoryNameEn is string && data.subcategoryNameEn.size() <= 100))
+        && (!('subcategoryNameBg' in data) || (data.subcategoryNameBg is string && data.subcategoryNameBg.size() <= 100))
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if false;
+
+      allow create: if isVerifiedUser()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserSettings(incoming(), userId);
+
+      allow update: if isVerifiedUser()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserSettings(incoming(), userId)
+        && incoming().uid == existing().uid
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['language', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['theme', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['defaultSeeded', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['language', 'theme', 'defaultSeeded', 'updatedAt'])
+        );
+
+      allow delete: if false;
+
+      match /months/{monthId} {
+        allow get: if isValidId(userId) && isValidId(monthId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId) && existing().ownerId == request.auth.uid;
+
+        allow create: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(monthId)
+          && isOwner(userId)
+          && isValidMonthlyBudget(incoming(), userId, monthId)
+          && incoming().createdAt == request.time
+          && exists(/databases/$(database)/documents/users/$(userId));
+
+        allow update: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(monthId)
+          && isOwner(userId)
+          && isValidMonthlyBudget(incoming(), userId, monthId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().monthKey == existing().monthKey
+          && incoming().year == existing().year
+          && incoming().month == existing().month
+          && incoming().createdAt == existing().createdAt
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && (
+            incoming().diff(existing()).affectedKeys().hasOnly(['items', 'updatedAt'])
+          );
+
+        allow delete: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(monthId)
+          && isOwner(userId)
+          && exists(/databases/$(database)/documents/users/$(userId));
+
+        match /transactions/{txId} {
+          allow get: if isValidId(userId) && isValidId(monthId) && isValidId(txId) && isOwner(userId);
+          allow list: if isValidId(userId) && isValidId(monthId) && isOwner(userId) && existing().ownerId == request.auth.uid;
+
+          allow create: if isVerifiedUser()
+            && isValidId(userId)
+            && isValidId(monthId)
+            && isValidId(txId)
+            && isOwner(userId)
+            && isValidTransactionEntry(incoming(), userId, monthId)
+            && incoming().createdAt == request.time
+            && exists(/databases/$(database)/documents/users/$(userId)/months/$(monthId));
+
+          allow update: if isVerifiedUser()
+            && isValidId(userId)
+            && isValidId(monthId)
+            && isValidId(txId)
+            && isOwner(userId)
+            && isValidTransactionEntry(incoming(), userId, monthId)
+            && incoming().ownerId == existing().ownerId
+            && incoming().monthKey == existing().monthKey
+            && incoming().createdAt == existing().createdAt
+            && exists(/databases/$(database)/documents/users/$(userId)/months/$(monthId))
+            && (
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'amount', 'note', 'date', 'lineItemId', 'group',
+                'categoryId', 'subcategoryId', 'subcategoryNameEn', 'subcategoryNameBg'
+              ])
+            );
+
+          allow delete: if isVerifiedUser()
+            && isValidId(userId)
+            && isValidId(monthId)
+            && isValidId(txId)
+            && isOwner(userId)
+            && exists(/databases/$(database)/documents/users/$(userId)/months/$(monthId));
+        }
+      }
+    }
+  }
+}

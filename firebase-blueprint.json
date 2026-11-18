@@ -1,0 +1,174 @@
+{
+  "entities": {
+    "UserSettings": {
+      "title": "UserSettings",
+      "description": "Per-user display preferences and onboarding state (non-PII).",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user",
+          "maxLength": 128
+        },
+        "language": {
+          "type": "string",
+          "enum": ["en", "bg"],
+          "description": "Preferred interface language"
+        },
+        "theme": {
+          "type": "string",
+          "enum": ["light", "dark"],
+          "description": "Preferred color theme"
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["EUR"],
+          "description": "Primary ledger currency"
+        },
+        "defaultSeeded": {
+          "type": "boolean",
+          "description": "Whether the initial baseline month has been seeded"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update"
+        }
+      },
+      "required": ["uid", "language", "theme", "currency", "defaultSeeded", "updatedAt"]
+    },
+    "MonthlyBudget": {
+      "title": "MonthlyBudget",
+      "description": "Monthly cash flow ledger containing income, bills, variable costs, and savings vaults.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID",
+          "maxLength": 128
+        },
+        "monthKey": {
+          "type": "string",
+          "description": "Month identifier in YYYY-MM format",
+          "pattern": "^[0-9]{4}-[0-9]{2}$",
+          "maxLength": 7
+        },
+        "year": {
+          "type": "integer",
+          "description": "Calendar year"
+        },
+        "month": {
+          "type": "integer",
+          "description": "Calendar month (1-12)"
+        },
+        "items": {
+          "type": "array",
+          "description": "Bounded list of budget line items for the month"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last modification"
+        }
+      },
+      "required": ["ownerId", "monthKey", "year", "month", "items", "createdAt", "updatedAt"]
+    },
+    "TransactionEntry": {
+      "title": "TransactionEntry",
+      "description": "Individual logged expense, income, or vault deposit linked to a monthly budget line item.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID",
+          "maxLength": 128
+        },
+        "monthKey": {
+          "type": "string",
+          "description": "Month identifier in YYYY-MM format",
+          "pattern": "^[0-9]{4}-[0-9]{2}$",
+          "maxLength": 7
+        },
+        "lineItemId": {
+          "type": "string",
+          "description": "Target line item ID inside the monthly budget",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 64
+        },
+        "group": {
+          "type": "string",
+          "enum": ["income", "bills", "variable", "savings"],
+          "description": "Ledger group of the line item"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Transaction amount in EUR"
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional short description or merchant note",
+          "maxLength": 200
+        },
+        "date": {
+          "type": "string",
+          "description": "Transaction date in YYYY-MM-DD format",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+          "maxLength": 10
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Optional main taxonomy category ID",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 64
+        },
+        "subcategoryId": {
+          "type": "string",
+          "description": "Optional taxonomy subcategory ID",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 64
+        },
+        "subcategoryNameEn": {
+          "type": "string",
+          "description": "Optional selected subcategory English label",
+          "maxLength": 100
+        },
+        "subcategoryNameBg": {
+          "type": "string",
+          "description": "Optional selected subcategory Bulgarian label",
+          "maxLength": 100
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation"
+        }
+      },
+      "required": ["ownerId", "monthKey", "lineItemId", "group", "amount", "note", "date", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserSettings"
+      },
+      "description": "Per-user settings and onboarding state."
+    },
+    "/users/{userId}/months/{monthId}": {
+      "schema": {
+        "$ref": "#/entities/MonthlyBudget"
+      },
+      "description": "Monthly budget ledger documents owned by the user."
+    },
+    "/users/{userId}/months/{monthId}/transactions/{txId}": {
+      "schema": {
+        "$ref": "#/entities/TransactionEntry"
+      },
+      "description": "Individual logged entries associated with a monthly budget."
+    }
+  }
+}

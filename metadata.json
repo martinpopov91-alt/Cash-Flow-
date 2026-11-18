@@ -1,0 +1,8 @@
+{
+  "name": "CashFlow Ledger",
+  "description": "Gemini-inspired monthly budget ledger, savings vault tracker, and cash flow analytics in EUR with bilingual EN/BG support and cloud sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
