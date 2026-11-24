@@ -3,7 +3,7 @@ export type ThemeMode = 'light' | 'dark';
 export type BudgetGroup = 'income' | 'bills' | 'variable' | 'savings';
 export type HighlightType = 'none' | 'attention' | 'vault';
 
-export type ActiveTab = 'overview' | 'ledger' | 'vaults' | 'trends';
+export type ActiveTab = 'overview' | 'ledger' | 'vaults' | 'trends' | 'sidelog';
 
 export type RawCategoryGroup = 'variable' | 'fixed' | 'debt' | 'savings' | 'income';
 
@@ -63,6 +63,20 @@ export interface TransactionEntry {
   subcategoryNameEn?: string;
   subcategoryNameBg?: string;
   createdAt?: unknown;
+}
+
+export type SideLogDirection = 'in' | 'out';
+
+export interface SideLogEntry {
+  id: string;
+  ownerId: string;
+  direction: SideLogDirection;
+  title: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
+  note: string;
+  createdAt?: unknown;
+  updatedAt?: unknown;
 }
 
 export interface UserSettings {

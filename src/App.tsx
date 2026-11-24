@@ -12,6 +12,7 @@ import { EmptyMonthState } from './components/EmptyMonthState';
 import { MonthPickerModal } from './components/MonthPickerModal';
 import { QuickEntrySheet } from './components/QuickEntrySheet';
 import { AddItemModal } from './components/AddItemModal';
+import { SideLogView } from './components/SideLogView';
 
 export default function App() {
   const {
@@ -32,12 +33,17 @@ export default function App() {
     setSelectedMonthKey,
     currentMonth,
     transactions,
+    sideLogs,
+    sideLogsLoading,
     createMonth,
     updateLineItem,
     addLineItem,
     deleteLineItem,
     logTransaction,
     deleteTransaction,
+    addSideLog,
+    updateSideLog,
+    deleteSideLog,
   } = useBudgetData();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
@@ -123,6 +129,17 @@ export default function App() {
           </div>
           <div className="h-72 rounded-xl bg-white dark:bg-[#2C2C2C] border border-[#DEDAD6] dark:border-[#3D3D3D]" />
         </div>
+      ) : activeTab === 'sidelog' ? (
+        <SideLogView
+          entries={sideLogs}
+          loading={sideLogsLoading}
+          selectedMonthKey={selectedMonthKey}
+          lang={activeLanguage}
+          onAdd={addSideLog}
+          onUpdate={updateSideLog}
+          onDelete={deleteSideLog}
+          onNotify={notify}
+        />
       ) : activeTab === 'trends' ? (
         <TrendsView
           allMonths={sortedMonths}

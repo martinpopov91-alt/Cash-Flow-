@@ -119,6 +119,34 @@ service cloud.firestore {
         && data.createdAt is timestamp;
     }
 
+    function isValidSideLogEntry(data, userId) {
+      return data.keys().hasAll(['ownerId', 'direction', 'title', 'amount', 'date', 'note', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'direction', 'title', 'amount', 'date', 'note', 'createdAt', 'updatedAt'])
+        && data.ownerId is string
+        && data.ownerId.size() >= 1
+        && data.ownerId.size() <= 128
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && data.direction is string
+        && data.direction.size() >= 2
+        && data.direction.size() <= 3
+        && data.direction in ['in', 'out']
+        && data.title is string
+        && data.title.size() >= 1
+        && data.title.size() <= 120
+        && (data.amount is int || data.amount is float)
+        && data.amount > 0
+        && data.amount <= 10000000
+        && data.date is string
+        && data.date.size() == 10
+        && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.note is string
+        && data.note.size() <= 250
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
     match /users/{userId} {
       allow get: if isValidId(userId) && isOwner(userId);
       allow list: if false;
@@ -212,6 +240,37 @@ service cloud.firestore {
             && isOwner(userId)
             && exists(/databases/$(database)/documents/users/$(userId)/months/$(monthId));
         }
+      }
+
+      match /sideLogs/{logId} {
+        allow get: if isValidId(userId) && isValidId(logId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId) && existing().ownerId == request.auth.uid;
+
+        allow create: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(logId)
+          && isOwner(userId)
+          && isValidSideLogEntry(incoming(), userId)
+          && incoming().createdAt == request.time
+          && exists(/databases/$(database)/documents/users/$(userId));
+
+        allow update: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(logId)
+          && isOwner(userId)
+          && isValidSideLogEntry(incoming(), userId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'direction', 'title', 'amount', 'date', 'note', 'updatedAt'
+          ]);
+
+        allow delete: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(logId)
+          && isOwner(userId)
+          && exists(/databases/$(database)/documents/users/$(userId));
       }
     }
   }

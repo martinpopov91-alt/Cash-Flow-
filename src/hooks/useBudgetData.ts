@@ -7,6 +7,7 @@ import {
 } from 'firebase/auth';
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   onSnapshot,
@@ -30,6 +31,8 @@ import {
   BudgetLineItem,
   Language,
   MonthlyBudget,
+  SideLogDirection,
+  SideLogEntry,
   ThemeMode,
   TransactionEntry,
   UserSettings,
@@ -49,6 +52,8 @@ export function useBudgetData() {
   const [selectedMonthKey, setSelectedMonthKey] = useState<string>(SEED_MONTH_KEY);
   const [transactions, setTransactions] = useState<TransactionEntry[]>([]);
   const [txLoading, setTxLoading] = useState(false);
+  const [sideLogs, setSideLogs] = useState<SideLogEntry[]>([]);
+  const [sideLogsLoading, setSideLogsLoading] = useState(false);
   const [localLanguage, setLocalLanguage] = useState<Language>(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('cf_lang') : null;
     return saved === 'bg' ? 'bg' : 'en';
@@ -93,6 +98,7 @@ export function useBudgetData() {
         setMonthsMap({});
         setMonthsLoaded(false);
         setTransactions([]);
+        setSideLogs([]);
       }
     });
     return () => unsub();
@@ -212,10 +218,37 @@ export function useBudgetData() {
       }
     );
 
+    const sideLogsPath = `users/${user.uid}/sideLogs`;
+    const sideLogsQuery = query(
+      collection(db, 'users', user.uid, 'sideLogs'),
+      where('ownerId', '==', user.uid)
+    );
+    setSideLogsLoading(true);
+    const sideLogsUnsub = onSnapshot(
+      sideLogsQuery,
+      (snapshot) => {
+        const list: SideLogEntry[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...(d.data() as Omit<SideLogEntry, 'id'>), id: d.id });
+        });
+        list.sort((a, b) => {
+          if (a.date !== b.date) return b.date.localeCompare(a.date);
+          return b.id.localeCompare(a.id);
+        });
+        setSideLogs(list);
+        setSideLogsLoading(false);
+      },
+      (err) => {
+        setSideLogsLoading(false);
+        handleFirestoreError(err, OperationType.LIST, sideLogsPath);
+      }
+    );
+
     return () => {
       cancelled = true;
       userUnsub();
       monthsUnsub();
+      sideLogsUnsub();
     };
   }, [authReady, user]);
 
@@ -620,6 +653,85 @@ export function useBudgetData() {
     [monthsMap, user]
   );
 
+  const addSideLog = useCallback(
+    async (payload: {
+      direction: SideLogDirection;
+      title: string;
+      amount: number;
+      date: string;
+      note: string;
+    }) => {
+      if (!user) return;
+      const safeAmount = round2(Math.max(0, Math.min(payload.amount, 10_000_000)));
+      const safeTitle = payload.title.trim().slice(0, 120);
+      if (safeAmount <= 0 || !safeTitle) return;
+
+      const logId = `side_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+      const path = `users/${user.uid}/sideLogs/${logId}`;
+      try {
+        await setDoc(doc(db, 'users', user.uid, 'sideLogs', logId), {
+          ownerId: user.uid,
+          direction: payload.direction,
+          title: safeTitle,
+          amount: safeAmount,
+          date: payload.date,
+          note: payload.note.trim().slice(0, 250),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, path);
+      }
+    },
+    [user]
+  );
+
+  const updateSideLog = useCallback(
+    async (
+      logId: string,
+      payload: {
+        direction: SideLogDirection;
+        title: string;
+        amount: number;
+        date: string;
+        note: string;
+      }
+    ) => {
+      if (!user) return;
+      const safeAmount = round2(Math.max(0, Math.min(payload.amount, 10_000_000)));
+      const safeTitle = payload.title.trim().slice(0, 120);
+      if (safeAmount <= 0 || !safeTitle) return;
+
+      const path = `users/${user.uid}/sideLogs/${logId}`;
+      try {
+        await updateDoc(doc(db, 'users', user.uid, 'sideLogs', logId), {
+          direction: payload.direction,
+          title: safeTitle,
+          amount: safeAmount,
+          date: payload.date,
+          note: payload.note.trim().slice(0, 250),
+          updatedAt: serverTimestamp(),
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, path);
+      }
+    },
+    [user]
+  );
+
+  const deleteSideLog = useCallback(
+    async (logId: string) => {
+      if (!user) return;
+      const path = `users/${user.uid}/sideLogs/${logId}`;
+      try {
+        await deleteDoc(doc(db, 'users', user.uid, 'sideLogs', logId));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, path);
+      }
+    },
+    [user]
+  );
+
   return {
     user,
     authReady,
@@ -640,11 +752,16 @@ export function useBudgetData() {
     currentMonth,
     transactions,
     txLoading,
+    sideLogs,
+    sideLogsLoading,
     createMonth,
     updateLineItem,
     addLineItem,
     deleteLineItem,
     logTransaction,
     deleteTransaction,
+    addSideLog,
+    updateSideLog,
+    deleteSideLog,
   };
 }

@@ -149,6 +149,55 @@
         }
       },
       "required": ["ownerId", "monthKey", "lineItemId", "group", "amount", "note", "date", "createdAt"]
+    },
+    "SideLogEntry": {
+      "title": "SideLogEntry",
+      "description": "Standalone money log entry tracked separately from the main monthly budget.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID",
+          "maxLength": 128
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["in", "out"],
+          "description": "Whether money came in or went out"
+        },
+        "title": {
+          "type": "string",
+          "description": "Short label describing the side money entry",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "amount": {
+          "type": "number",
+          "description": "Entry amount in EUR"
+        },
+        "date": {
+          "type": "string",
+          "description": "Entry date in YYYY-MM-DD format",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+          "maxLength": 10
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional note for context",
+          "maxLength": 250
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last modification"
+        }
+      },
+      "required": ["ownerId", "direction", "title", "amount", "date", "note", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -169,6 +218,12 @@
         "$ref": "#/entities/TransactionEntry"
       },
       "description": "Individual logged entries associated with a monthly budget."
+    },
+    "/users/{userId}/sideLogs/{logId}": {
+      "schema": {
+        "$ref": "#/entities/SideLogEntry"
+      },
+      "description": "Standalone money log entries kept strictly separate from the main monthly ledger."
     }
   }
 }

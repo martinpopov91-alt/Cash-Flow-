@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   LogOut,
   Moon,
+  NotebookPen,
   PiggyBank,
   Plus,
   Sun,
@@ -56,11 +57,17 @@ export function AppShell({
 }: AppShellProps) {
   const t = TRANSLATIONS[lang];
 
-  const navItems: { id: ActiveTab; label: string; icon: typeof LayoutDashboard }[] = [
+  const navItems: {
+    id: ActiveTab;
+    label: string;
+    icon: typeof LayoutDashboard;
+    separated?: boolean;
+  }[] = [
     { id: 'overview', label: t.navOverview, icon: LayoutDashboard },
     { id: 'ledger', label: t.navLedger, icon: Table2 },
     { id: 'vaults', label: t.navVaults, icon: PiggyBank },
     { id: 'trends', label: t.navTrends, icon: BarChart3 },
+    { id: 'sidelog', label: t.navSideLog, icon: NotebookPen, separated: true },
   ];
 
   const activeNavLabel = navItems.find((n) => n.id === activeTab)?.label ?? t.brand;
@@ -163,33 +170,37 @@ export function AppShell({
               const Icon = item.icon;
               const active = activeTab === item.id;
               return (
-                <button
+                <div
                   key={item.id}
-                  type="button"
-                  onClick={() => onSelectTab(item.id)}
-                  className={`relative w-full min-h-[44px] px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-3 transition-colors whitespace-nowrap cursor-pointer ${
-                    active
-                      ? 'bg-white/12 text-white'
-                      : 'text-[#C0BFBC] hover:bg-white/8 hover:text-white'
-                  }`}
+                  className={item.separated ? 'pt-3 mt-3 border-t border-white/10' : ''}
                 >
-                  {active && (
-                    <span
-                      aria-hidden="true"
-                      className="absolute left-0 top-2.5 bottom-2.5 w-1 rounded-r-full bg-[#E95420]"
-                    />
-                  )}
-                  <span
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                  <button
+                    type="button"
+                    onClick={() => onSelectTab(item.id)}
+                    className={`relative w-full min-h-[44px] px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-3 transition-colors whitespace-nowrap cursor-pointer ${
                       active
-                        ? 'bg-[#E95420] text-white'
-                        : 'bg-white/8 text-[#DEDDDA]'
+                        ? 'bg-white/12 text-white'
+                        : 'text-[#C0BFBC] hover:bg-white/8 hover:text-white'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
-                  </span>
-                  <span className="truncate">{item.label}</span>
-                </button>
+                    {active && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute left-0 top-2.5 bottom-2.5 w-1 rounded-r-full bg-[#E95420]"
+                      />
+                    )}
+                    <span
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                        active
+                          ? 'bg-[#E95420] text-white'
+                          : 'bg-white/8 text-[#DEDDDA]'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </span>
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                </div>
               );
             })}
           </nav>
@@ -248,7 +259,7 @@ export function AppShell({
         aria-label="Mobile navigation"
         className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#1D1D1D]/95 text-[#EEEEEC] backdrop-blur-md border-t border-black/40 pb-safe"
       >
-        <div className="grid grid-cols-5 items-center h-16 px-1">
+        <div className="grid grid-cols-6 items-center h-16 px-0.5">
           <button
             type="button"
             onClick={() => onSelectTab('overview')}
@@ -256,8 +267,8 @@ export function AppShell({
               activeTab === 'overview' ? 'text-[#E95420]' : 'text-[#C0BFBC]'
             }`}
           >
-            <LayoutDashboard className="w-5 h-5" />
-            <span className="text-[10px] font-medium truncate max-w-full px-1">
+            <LayoutDashboard className="w-4 h-4" />
+            <span className="text-[10px] font-medium truncate max-w-full px-0.5">
               {t.navOverview}
             </span>
           </button>
@@ -269,8 +280,8 @@ export function AppShell({
               activeTab === 'ledger' ? 'text-[#E95420]' : 'text-[#C0BFBC]'
             }`}
           >
-            <Table2 className="w-5 h-5" />
-            <span className="text-[10px] font-medium truncate max-w-full px-1">
+            <Table2 className="w-4 h-4" />
+            <span className="text-[10px] font-medium truncate max-w-full px-0.5">
               {lang === 'bg' ? 'Таблица' : 'Sheet'}
             </span>
           </button>
@@ -281,7 +292,7 @@ export function AppShell({
               type="button"
               disabled={!hasCurrentMonth}
               onClick={onOpenQuickEntry}
-              className="w-11 h-11 rounded-xl bg-[#E95420] hover:bg-[#D34615] text-white flex items-center justify-center shadow-sm active:scale-95 transition-transform disabled:opacity-40"
+              className="w-10 h-10 rounded-xl bg-[#E95420] hover:bg-[#D34615] text-white flex items-center justify-center shadow-sm active:scale-95 transition-transform disabled:opacity-40"
               aria-label={t.quickEntry}
             >
               <Plus className="w-5 h-5" />
@@ -295,8 +306,8 @@ export function AppShell({
               activeTab === 'vaults' ? 'text-[#E95420]' : 'text-[#C0BFBC]'
             }`}
           >
-            <PiggyBank className="w-5 h-5" />
-            <span className="text-[10px] font-medium truncate max-w-full px-1">
+            <PiggyBank className="w-4 h-4" />
+            <span className="text-[10px] font-medium truncate max-w-full px-0.5">
               {lang === 'bg' ? 'Трезори' : 'Vaults'}
             </span>
           </button>
@@ -308,9 +319,22 @@ export function AppShell({
               activeTab === 'trends' ? 'text-[#E95420]' : 'text-[#C0BFBC]'
             }`}
           >
-            <BarChart3 className="w-5 h-5" />
-            <span className="text-[10px] font-medium truncate max-w-full px-1">
+            <BarChart3 className="w-4 h-4" />
+            <span className="text-[10px] font-medium truncate max-w-full px-0.5">
               {lang === 'bg' ? 'Тенденции' : 'Trends'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onSelectTab('sidelog')}
+            className={`min-h-[44px] flex flex-col items-center justify-center gap-0.5 ${
+              activeTab === 'sidelog' ? 'text-[#E95420]' : 'text-[#C0BFBC]'
+            }`}
+          >
+            <NotebookPen className="w-4 h-4" />
+            <span className="text-[10px] font-medium truncate max-w-full px-0.5">
+              {lang === 'bg' ? 'Дневник' : 'Side Log'}
             </span>
           </button>
         </div>
