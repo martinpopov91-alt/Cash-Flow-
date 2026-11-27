@@ -13,6 +13,7 @@ import { MonthPickerModal } from './components/MonthPickerModal';
 import { QuickEntrySheet } from './components/QuickEntrySheet';
 import { AddItemModal } from './components/AddItemModal';
 import { SideLogView } from './components/SideLogView';
+import { UbuntuSplashScreen } from './components/UbuntuSplashScreen';
 
 export default function App() {
   const {
@@ -20,8 +21,11 @@ export default function App() {
     authReady,
     authLoading,
     authError,
+    authStatus,
     signInWithGoogle,
+    clearAuthFeedback,
     signOut,
+    settings,
     activeLanguage,
     activeTheme,
     setLanguage,
@@ -78,11 +82,12 @@ export default function App() {
     setAddItemOpen(true);
   }
 
-  if (!authReady) {
+  if (!authReady || (user && !monthsLoaded && !settings)) {
     return (
-      <div className="min-h-screen bg-[#F5F3F1] dark:bg-[#1B1B1B] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-[#E95420] border-t-transparent animate-spin" />
-      </div>
+      <UbuntuSplashScreen
+        lang={activeLanguage}
+        status={user ? 'verifying' : authStatus}
+      />
     );
   }
 
@@ -93,7 +98,9 @@ export default function App() {
         theme={activeTheme}
         loading={authLoading}
         error={authError}
+        status={authStatus}
         onSignIn={signInWithGoogle}
+        onClearError={clearAuthFeedback}
         onToggleLanguage={setLanguage}
         onToggleTheme={toggleTheme}
       />

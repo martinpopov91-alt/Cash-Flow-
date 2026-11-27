@@ -27,6 +27,7 @@ import {
   testFirestoreConnection,
 } from '../lib/firebase';
 import {
+  AuthFlowStatus,
   BudgetGroup,
   BudgetLineItem,
   Language,
@@ -45,6 +46,7 @@ export function useBudgetData() {
   const [authReady, setAuthReady] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [authStatus, setAuthStatus] = useState<AuthFlowStatus>('checking');
 
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [monthsMap, setMonthsMap] = useState<Record<string, MonthlyBudget>>({});
@@ -99,6 +101,12 @@ export function useBudgetData() {
         setMonthsLoaded(false);
         setTransactions([]);
         setSideLogs([]);
+        setAuthStatus((prev) =>
+          prev === 'error' || prev === 'cancelled' ? prev : 'idle'
+        );
+      } else {
+        setAuthError(null);
+        setAuthStatus('verifying');
       }
     });
     return () => unsub();
@@ -300,18 +308,40 @@ export function useBudgetData() {
   const signInWithGoogle = useCallback(async () => {
     setAuthLoading(true);
     setAuthError(null);
+    setAuthStatus('opening_popup');
     try {
       await signInWithPopup(auth, googleProvider);
+      setAuthStatus('verifying');
     } catch (err) {
+      const code =
+        typeof err === 'object' && err !== null && 'code' in err
+          ? String((err as { code?: unknown }).code)
+          : '';
       const msg = err instanceof Error ? err.message : 'Unable to sign in with Google.';
+      if (
+        code === 'auth/popup-closed-by-user' ||
+        code === 'auth/cancelled-popup-request' ||
+        msg.includes('auth/popup-closed-by-user')
+      ) {
+        setAuthStatus('cancelled');
+      } else {
+        setAuthStatus('error');
+      }
       setAuthError(msg);
     } finally {
       setAuthLoading(false);
     }
   }, []);
 
+  const clearAuthFeedback = useCallback(() => {
+    setAuthError(null);
+    setAuthStatus('idle');
+  }, []);
+
   const signOut = useCallback(async () => {
     await firebaseSignOut(auth);
+    setAuthError(null);
+    setAuthStatus('idle');
   }, []);
 
   const setLanguage = useCallback(
@@ -737,7 +767,9 @@ export function useBudgetData() {
     authReady,
     authLoading,
     authError,
+    authStatus,
     signInWithGoogle,
+    clearAuthFeedback,
     signOut,
     settings,
     activeLanguage,

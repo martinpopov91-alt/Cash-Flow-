@@ -5,6 +5,14 @@ export type HighlightType = 'none' | 'attention' | 'vault';
 
 export type ActiveTab = 'overview' | 'ledger' | 'vaults' | 'trends' | 'sidelog';
 
+export type AuthFlowStatus =
+  | 'checking'
+  | 'idle'
+  | 'opening_popup'
+  | 'verifying'
+  | 'cancelled'
+  | 'error';
+
 export type RawCategoryGroup = 'variable' | 'fixed' | 'debt' | 'savings' | 'income';
 
 export interface CategorySubitem {
