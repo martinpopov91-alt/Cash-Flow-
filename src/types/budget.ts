@@ -3,7 +3,13 @@ export type ThemeMode = 'light' | 'dark';
 export type BudgetGroup = 'income' | 'bills' | 'variable' | 'savings';
 export type HighlightType = 'none' | 'attention' | 'vault';
 
-export type ActiveTab = 'overview' | 'ledger' | 'vaults' | 'trends' | 'sidelog';
+export type ActiveTab =
+  | 'overview'
+  | 'transactions'
+  | 'ledger'
+  | 'vaults'
+  | 'trends'
+  | 'sidelog';
 
 export type AuthFlowStatus =
   | 'checking'

@@ -683,6 +683,143 @@ export function useBudgetData() {
     [monthsMap, user]
   );
 
+  const updateTransaction = useCallback(
+    async (
+      monthKey: string,
+      oldTx: TransactionEntry,
+      payload: {
+        lineItemId?: string;
+        group: BudgetGroup;
+        amount: number;
+        note: string;
+        date: string;
+        categoryId?: string;
+        subcategoryId?: string;
+        subcategoryNameEn?: string;
+        subcategoryNameBg?: string;
+        newItem?: {
+          labelEn: string;
+          labelBg: string;
+          categoryId: string;
+          subcategoryId?: string;
+        };
+      }
+    ) => {
+      if (!user) return;
+      const target = monthsMap[monthKey];
+      if (!target) return;
+
+      const safeAmount = round2(Math.max(0, Math.min(payload.amount, 10_000_000)));
+      if (safeAmount <= 0) return;
+
+      const safeId = (val?: string) =>
+        val && /^[a-zA-Z0-9_-]{1,64}$/.test(val) ? val : undefined;
+
+      const selectedCategoryId = safeId(payload.categoryId || payload.newItem?.categoryId);
+      const selectedSubcategoryId = safeId(
+        payload.subcategoryId || payload.newItem?.subcategoryId
+      );
+
+      let resolvedLineItemId = payload.lineItemId || '';
+      let resolvedCategoryId = selectedCategoryId;
+      let resolvedSubcategoryId = selectedSubcategoryId;
+      let resolvedSubNameEn = (payload.subcategoryNameEn || payload.newItem?.labelEn || '')
+        .trim()
+        .slice(0, 100);
+      let resolvedSubNameBg = (payload.subcategoryNameBg || payload.newItem?.labelBg || '')
+        .trim()
+        .slice(0, 100);
+
+      let nextItems = target.items.map((item) =>
+        item.id === oldTx.lineItemId
+          ? { ...item, actualAmount: round2(Math.max(0, item.actualAmount - oldTx.amount)) }
+          : item
+      );
+
+      const existingTarget = resolvedLineItemId
+        ? nextItems.find((i) => i.id === resolvedLineItemId)
+        : undefined;
+
+      if (existingTarget) {
+        resolvedCategoryId = resolvedCategoryId || safeId(existingTarget.categoryId);
+        resolvedSubcategoryId = resolvedSubcategoryId || safeId(existingTarget.subcategoryId);
+        if (!resolvedSubNameEn) resolvedSubNameEn = existingTarget.labelEn.slice(0, 100);
+        if (!resolvedSubNameBg) resolvedSubNameBg = existingTarget.labelBg.slice(0, 100);
+
+        nextItems = nextItems.map((item) =>
+          item.id === resolvedLineItemId
+            ? {
+                ...item,
+                actualAmount: round2(item.actualAmount + safeAmount),
+                ...(selectedCategoryId ? { categoryId: selectedCategoryId } : {}),
+                ...(selectedSubcategoryId ? { subcategoryId: selectedSubcategoryId } : {}),
+              }
+            : item
+        );
+      } else if (payload.newItem && nextItems.length < 100) {
+        resolvedLineItemId = `custom_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+        const createdItem: BudgetLineItem = {
+          id: resolvedLineItemId,
+          group: payload.group,
+          key: resolvedLineItemId,
+          labelEn: payload.newItem.labelEn.trim().slice(0, 80),
+          labelBg: (payload.newItem.labelBg.trim() || payload.newItem.labelEn.trim()).slice(
+            0,
+            80
+          ),
+          dueDate: '',
+          budgetAmount: 0,
+          actualAmount: safeAmount,
+          isRecurring: false,
+          highlightType: payload.group === 'savings' ? 'vault' : 'none',
+          categoryId: payload.newItem.categoryId,
+          ...(payload.newItem.subcategoryId
+            ? { subcategoryId: payload.newItem.subcategoryId }
+            : {}),
+        };
+        nextItems = [...nextItems, createdItem];
+      } else {
+        resolvedLineItemId = oldTx.lineItemId;
+        nextItems = nextItems.map((item) =>
+          item.id === resolvedLineItemId
+            ? { ...item, actualAmount: round2(item.actualAmount + safeAmount) }
+            : item
+        );
+      }
+
+      const txRef = doc(db, 'users', user.uid, 'months', monthKey, 'transactions', oldTx.id);
+      const monthRef = doc(db, 'users', user.uid, 'months', monthKey);
+
+      const batch = writeBatch(db);
+      batch.update(txRef, {
+        lineItemId: resolvedLineItemId,
+        group: payload.group,
+        amount: safeAmount,
+        note: payload.note.trim().slice(0, 200),
+        date: payload.date,
+        ...(resolvedCategoryId ? { categoryId: resolvedCategoryId } : {}),
+        ...(resolvedSubcategoryId ? { subcategoryId: resolvedSubcategoryId } : {}),
+        ...(resolvedSubNameEn ? { subcategoryNameEn: resolvedSubNameEn } : {}),
+        ...(resolvedSubNameBg ? { subcategoryNameBg: resolvedSubNameBg } : {}),
+      });
+      batch.update(monthRef, {
+        items: nextItems,
+        updatedAt: serverTimestamp(),
+      });
+
+      try {
+        await batch.commit();
+      } catch (err) {
+        handleFirestoreError(
+          err,
+          OperationType.UPDATE,
+          `users/${user.uid}/months/${monthKey}/transactions/${oldTx.id}`
+        );
+      }
+    },
+    [monthsMap, user]
+  );
+
   const addSideLog = useCallback(
     async (payload: {
       direction: SideLogDirection;
@@ -791,6 +928,7 @@ export function useBudgetData() {
     addLineItem,
     deleteLineItem,
     logTransaction,
+    updateTransaction,
     deleteTransaction,
     addSideLog,
     updateSideLog,

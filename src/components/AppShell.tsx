@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import {
   BarChart3,
   Calendar,
@@ -8,9 +8,11 @@ import {
   LayoutDashboard,
   LogOut,
   Moon,
+  MoreHorizontal,
   NotebookPen,
   PiggyBank,
   Plus,
+  ReceiptText,
   Sun,
   Table2,
   Terminal,
@@ -56,6 +58,7 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const t = TRANSLATIONS[lang];
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
 
   const navItems: {
     id: ActiveTab;
@@ -64,6 +67,7 @@ export function AppShell({
     separated?: boolean;
   }[] = [
     { id: 'overview', label: t.navOverview, icon: LayoutDashboard },
+    { id: 'transactions', label: t.navTransactions, icon: ReceiptText },
     { id: 'ledger', label: t.navLedger, icon: Table2 },
     { id: 'vaults', label: t.navVaults, icon: PiggyBank },
     { id: 'trends', label: t.navTrends, icon: BarChart3 },
@@ -254,6 +258,46 @@ export function AppShell({
         </main>
       </div>
 
+      {/* Mobile Overflow Menu for Vaults & Trends */}
+      {mobileMoreOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-35"
+          onClick={() => setMobileMoreOpen(false)}
+        >
+          <div
+            className="fixed bottom-18 right-3 w-56 rounded-xl bg-[#242424] text-[#EEEEEC] border border-[#3D3D3D] shadow-2xl p-1.5 space-y-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                onSelectTab('vaults');
+                setMobileMoreOpen(false);
+              }}
+              className={`w-full min-h-[42px] px-3 rounded-lg text-xs font-medium flex items-center gap-2.5 ${
+                activeTab === 'vaults' ? 'bg-[#E95420] text-white' : 'hover:bg-white/10'
+              }`}
+            >
+              <PiggyBank className="w-4 h-4" />
+              <span>{t.navVaults}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onSelectTab('trends');
+                setMobileMoreOpen(false);
+              }}
+              className={`w-full min-h-[42px] px-3 rounded-lg text-xs font-medium flex items-center gap-2.5 ${
+                activeTab === 'trends' ? 'bg-[#E95420] text-white' : 'hover:bg-white/10'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span>{t.navTrends}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Bottom Ubuntu Dock (compact <= 64px, keeping total sticky <= 15% VH) */}
       <nav
         aria-label="Mobile navigation"
@@ -262,7 +306,10 @@ export function AppShell({
         <div className="grid grid-cols-6 items-center h-16 px-0.5">
           <button
             type="button"
-            onClick={() => onSelectTab('overview')}
+            onClick={() => {
+              setMobileMoreOpen(false);
+              onSelectTab('overview');
+            }}
             className={`min-h-[44px] flex flex-col items-center justify-center gap-0.5 ${
               activeTab === 'overview' ? 'text-[#E95420]' : 'text-[#C0BFBC]'
             }`}
@@ -275,7 +322,43 @@ export function AppShell({
 
           <button
             type="button"
-            onClick={() => onSelectTab('ledger')}
+            onClick={() => {
+              setMobileMoreOpen(false);
+              onSelectTab('transactions');
+            }}
+            title={t.navTransactions}
+            className={`min-h-[44px] flex flex-col items-center justify-center gap-0.5 ${
+              activeTab === 'transactions' ? 'text-[#E95420]' : 'text-[#C0BFBC]'
+            }`}
+          >
+            <ReceiptText className="w-4 h-4" />
+            <span className="text-[10px] font-medium truncate max-w-full px-0.5">
+              {t.navTransactions}
+            </span>
+          </button>
+
+          {/* Center Thumb-Zone Ubuntu Orange Action */}
+          <div className="flex items-center justify-center">
+            <button
+              type="button"
+              disabled={!hasCurrentMonth}
+              onClick={() => {
+                setMobileMoreOpen(false);
+                onOpenQuickEntry();
+              }}
+              className="w-10 h-10 rounded-xl bg-[#E95420] hover:bg-[#D34615] text-white flex items-center justify-center shadow-sm active:scale-95 transition-transform disabled:opacity-40"
+              aria-label={t.quickEntry}
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMobileMoreOpen(false);
+              onSelectTab('ledger');
+            }}
             className={`min-h-[44px] flex flex-col items-center justify-center gap-0.5 ${
               activeTab === 'ledger' ? 'text-[#E95420]' : 'text-[#C0BFBC]'
             }`}
@@ -286,48 +369,12 @@ export function AppShell({
             </span>
           </button>
 
-          {/* Center Thumb-Zone Ubuntu Orange Action */}
-          <div className="flex items-center justify-center">
-            <button
-              type="button"
-              disabled={!hasCurrentMonth}
-              onClick={onOpenQuickEntry}
-              className="w-10 h-10 rounded-xl bg-[#E95420] hover:bg-[#D34615] text-white flex items-center justify-center shadow-sm active:scale-95 transition-transform disabled:opacity-40"
-              aria-label={t.quickEntry}
-            >
-              <Plus className="w-5 h-5" />
-            </button>
-          </div>
-
           <button
             type="button"
-            onClick={() => onSelectTab('vaults')}
-            className={`min-h-[44px] flex flex-col items-center justify-center gap-0.5 ${
-              activeTab === 'vaults' ? 'text-[#E95420]' : 'text-[#C0BFBC]'
-            }`}
-          >
-            <PiggyBank className="w-4 h-4" />
-            <span className="text-[10px] font-medium truncate max-w-full px-0.5">
-              {lang === 'bg' ? 'Трезори' : 'Vaults'}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onSelectTab('trends')}
-            className={`min-h-[44px] flex flex-col items-center justify-center gap-0.5 ${
-              activeTab === 'trends' ? 'text-[#E95420]' : 'text-[#C0BFBC]'
-            }`}
-          >
-            <BarChart3 className="w-4 h-4" />
-            <span className="text-[10px] font-medium truncate max-w-full px-0.5">
-              {lang === 'bg' ? 'Тенденции' : 'Trends'}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onSelectTab('sidelog')}
+            onClick={() => {
+              setMobileMoreOpen(false);
+              onSelectTab('sidelog');
+            }}
             className={`min-h-[44px] flex flex-col items-center justify-center gap-0.5 ${
               activeTab === 'sidelog' ? 'text-[#E95420]' : 'text-[#C0BFBC]'
             }`}
@@ -335,6 +382,21 @@ export function AppShell({
             <NotebookPen className="w-4 h-4" />
             <span className="text-[10px] font-medium truncate max-w-full px-0.5">
               {lang === 'bg' ? 'Дневник' : 'Side Log'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobileMoreOpen((prev) => !prev)}
+            className={`min-h-[44px] flex flex-col items-center justify-center gap-0.5 ${
+              activeTab === 'vaults' || activeTab === 'trends' || mobileMoreOpen
+                ? 'text-[#E95420]'
+                : 'text-[#C0BFBC]'
+            }`}
+          >
+            <MoreHorizontal className="w-4 h-4" />
+            <span className="text-[10px] font-medium truncate max-w-full px-0.5">
+              {lang === 'bg' ? 'Още' : 'More'}
             </span>
           </button>
         </div>

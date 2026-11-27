@@ -29,6 +29,7 @@ interface DashboardViewProps {
   onQuickEntry: (group?: BudgetGroup, itemId?: string) => void;
   onDeleteTransaction: (tx: TransactionEntry) => Promise<void>;
   onOpenLedger: () => void;
+  onOpenTransactions: () => void;
 }
 
 const YARU_CHART_PALETTE = [
@@ -49,6 +50,7 @@ export function DashboardView({
   onQuickEntry,
   onDeleteTransaction,
   onOpenLedger,
+  onOpenTransactions,
 }: DashboardViewProps) {
   const t = TRANSLATIONS[lang];
   const totals = useMemo(() => calculateMonthTotals(month.items), [month.items]);
@@ -598,14 +600,23 @@ export function DashboardView({
                 {transactions.length} {lang === 'bg' ? 'записа за месеца' : 'entries this month'}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => onQuickEntry('variable')}
-              className="min-h-[34px] px-3 py-1 rounded-lg bg-[#E95420] hover:bg-[#D34615] text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{t.quickEntry}</span>
-            </button>
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={onOpenTransactions}
+                className="text-xs font-medium text-[#E95420] hover:underline whitespace-nowrap cursor-pointer"
+              >
+                {t.txViewAll}
+              </button>
+              <button
+                type="button"
+                onClick={() => onQuickEntry('variable')}
+                className="min-h-[34px] px-3 py-1 rounded-lg bg-[#E95420] hover:bg-[#D34615] text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{t.quickEntry}</span>
+              </button>
+            </div>
           </div>
 
           <div className="p-5 flex-1 flex flex-col">

@@ -13,6 +13,7 @@ import { MonthPickerModal } from './components/MonthPickerModal';
 import { QuickEntrySheet } from './components/QuickEntrySheet';
 import { AddItemModal } from './components/AddItemModal';
 import { SideLogView } from './components/SideLogView';
+import { TransactionsView } from './components/TransactionsView';
 import { UbuntuSplashScreen } from './components/UbuntuSplashScreen';
 
 export default function App() {
@@ -37,6 +38,7 @@ export default function App() {
     setSelectedMonthKey,
     currentMonth,
     transactions,
+    txLoading,
     sideLogs,
     sideLogsLoading,
     createMonth,
@@ -44,6 +46,7 @@ export default function App() {
     addLineItem,
     deleteLineItem,
     logTransaction,
+    updateTransaction,
     deleteTransaction,
     addSideLog,
     updateSideLog,
@@ -184,6 +187,24 @@ export default function App() {
             notify(t.toastEntryRemoved);
           }}
           onOpenLedger={() => setActiveTab('ledger')}
+          onOpenTransactions={() => setActiveTab('transactions')}
+        />
+      ) : activeTab === 'transactions' ? (
+        <TransactionsView
+          month={currentMonth}
+          transactions={transactions}
+          loading={txLoading}
+          lang={activeLanguage}
+          onLogTransaction={(payload) =>
+            logTransaction(currentMonth.monthKey, payload)
+          }
+          onUpdateTransaction={(oldTx, payload) =>
+            updateTransaction(currentMonth.monthKey, oldTx, payload)
+          }
+          onDeleteTransaction={(tx) =>
+            deleteTransaction(currentMonth.monthKey, tx)
+          }
+          onNotify={notify}
         />
       ) : activeTab === 'ledger' ? (
         <LedgerView
